@@ -36,6 +36,31 @@ def mle_negative_binomial(beta, X, bin, y):
     )
     return -likelihood_func
 
+def mle_zip(beta, X, bin, y):
+    pred_mu = np.exp(beta[0] + beta[1]*X + beta[2]*bin)
+    pi = 1 / (1 + np.exp(-(beta[3] + beta[4]*X + beta[5]*bin)))  
+
+    likelihood_func = np.sum(
+        (y == 0) * np.log(pi + (1 - pi) * np.exp(-pred_mu)) +
+        (y > 0) * (np.log(1 - pi) + y * np.log(pred_mu) - pred_mu - gammaln(y + 1))
+    )
+    return -likelihood_func
+
+def mle_zinb(beta, X, bin, y):
+    # Zero-inflated Negative Binomial (ZINB) モデルのパラメータ推定
+    lambda_poi = np.exp(beta[0] + beta[1]*X + beta[2]*bin)
+    pi = 1 / (1 + np.exp(-(beta[3] + beta[4]*X + beta[5]*bin)))  # Zero inflation part
+    theta = beta[6]  # Negative binomial dispersion parameter
+
+    # ZINBモデルの尤度関数
+    likelihood_func = np.sum(
+        (y == 0) * np.log(pi + (1 - pi) * np.exp(-lambda_poi)) +
+        (y > 0) * (np.log(1 - pi) + gammaln(y + theta) - gammaln(theta) - gammaln(y + 1) +
+                   y * np.log(lambda_poi / (lambda_poi + theta)) +
+                   theta * np.log(theta / (lambda_poi + theta)))
+    )
+    return -likelihood_func
+
 def calc_res():
     init_pars_poi = np.array([1,1,1])
     res_poi = minimize(mle_poisson, init_pars_poi, args=(X, bin, y), method='BFGS')
